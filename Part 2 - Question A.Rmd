@@ -1,0 +1,93 @@
+---
+title: "BUA 301 Project Part 2"
+output: html_document
+date: "2024-11-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Part 2: Beginning
+
+You must first view the cleaned data set from part 1
+
+```{r cars}
+View(df_clean_etl)
+
+
+```
+
+## Part 2: Question A
+
+1)     How many customers participate in Swift Arrow’s customer loyalty program?
+
+To do this you need to count the number of unique Customer ID numbers, excluding NA values
+
+Answer: there are 167,262 customers in the loyalty program
+
+```{r cars}
+# Count unique non-NA values in the customer_id column using unique()
+unique_non_na_count <- length(unique(df_clean_etl$customer_id[!is.na(df_clean_etl$customer_id)]))
+print(unique_non_na_count)
+
+
+
+```
+
+## Part 2: Question B
+
+     How often do participating customers scan their loyalty cards?
+
+Answer: We can see from the summary statistics that the distribution of using the loyalty cards has an extreme right skew, meaning that the vast majority of customers will likely use their loyalty card once and then never use it again
+
+```{r cars}
+library(dplyr)
+
+# Filter out rows with NA in customer_id, as these represent non-participating customers
+customer_scan_counts <- df_clean_etl %>%
+  filter(!is.na(customer_id)) %>%        # Only participating customers
+  count(customer_id) %>%                  # Count occurrences of each unique customer_id
+  rename(scan_count = n)                  # Rename the count column to scan_count
+
+# Summary statistics for scan frequencies
+summary(customer_scan_counts$scan_count)
+
+
+
+```
+
+## Part 2: Question C
+
+     For what types of transactions (e.g., fuel versus merchandise purchases) do participating customers scan their loyalty cards?
+
+Answer: We can see that fuel purchases and Cold Dispensed Beverages have are the most frequent purchases by far at this store by loyalty members, both of them having more than double the amount of transactions that the third category
+
+```{r cars}
+library(dplyr)
+
+# Analyze transaction types for participating customers
+transaction_types <- df_clean_etl %>%
+  filter(!is.na(customer_id)) %>%            # Only include participating customers
+  group_by(parent_name) %>%                  # Group by the main transaction type 
+  summarise(scan_count = n()) %>%            # Count the number of scans per transaction type
+  arrange(desc(scan_count))                  # Order by the highest scan counts
+
+# View the results
+print(transaction_types)
+
+
+
+```
+
+## 
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
