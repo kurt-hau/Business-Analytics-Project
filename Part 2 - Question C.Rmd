@@ -1,0 +1,105 @@
+---
+title: 'Bua 301 Project Part 2 C: Choosing Own Problem'
+output: html_document
+date: "2024-11-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+# **Problem we want to solve:**
+
+Determine which products may be no longer worth selling. This includes products that have a high cost of goods, but are not purchased as often (low revenue).
+
+## Step 1: Group by each specific product and collect all the relevant columns and create totals for each of them
+
+```{r cars}
+library(dplyr)
+
+# Aggregate data by product_name to get total units, total revenue, and total costs
+product_summary <- df_clean_etl %>%
+  group_by(product_name) %>%
+  summarise(
+    total_units = sum(units, na.rm = TRUE),            # Total units sold, per product
+    total_revenue = sum(revenue, na.rm = TRUE),        # Total revenue, per product
+    total_cost = sum(costs, na.rm = TRUE)              # Total cost of goods sold, per product
+  )
+
+```
+
+## Step 2: Group by each specific product and collect all the relevant columns and create totals for each of them
+
+```{r cars}
+library(dplyr)
+
+# Aggregate data by product_name to get total units, total revenue, and total costs
+product_summary <- df_clean_etl %>%
+  group_by(product_name) %>%
+  summarise(
+    total_units = sum(units, na.rm = TRUE),            # Total units sold, per product
+    total_revenue = sum(revenue, na.rm = TRUE),        # Total revenue, per product
+    total_cost = sum(costs, na.rm = TRUE)              # Total cost of goods sold, per product
+  )
+
+```
+
+## 
+
+## Step 2: Calculate profitability metrics
+
+```{r cars}
+# Calculate gross profit and gross margin for each product
+product_summary <- product_summary %>%
+  mutate(
+    gross_profit = total_revenue - total_cost,                     # Gross profit
+    gross_margin = (gross_profit / total_revenue) * 100            # Gross margin percentage
+  )
+
+
+```
+
+## Step 3: Identify Low-Frequency, High-Cost Products
+
+```{r cars}
+# Set thresholds based on quantiles and averages
+low_sales_threshold <- quantile(product_summary$total_units, 0.20)  # Bottom 20% for units sold
+
+# Calculate the average cost per unit across all products
+average_cost_per_unit <- mean(df_clean_etl$costs, na.rm = TRUE)
+
+# Filter products that are low frequency (low sales) and high cost
+low_sales_high_cost_products <- product_summary %>%
+  filter(total_units < average_cost_per_unit & total_cost > average_cost_per_unit)
+
+```
+
+## 
+
+## Step 4: Visualize the results
+
+You can also embed plots, for example:
+
+```{r pressure}
+library(ggplot2)
+
+# Scatter plot of total units sold vs gross profit
+ggplot(product_summary, aes(x = log(total_units), y = log(gross_profit))) +
+  geom_point(color = "blue") +
+  geom_point(data = low_sales_high_cost_products, color = "red") +  # Highlight the identified products
+  labs(
+    title = "Profitability vs. Sales Frequency",
+    x = "Total Units Sold",
+    y = "Gross Profit"
+  ) +
+  theme_minimal()
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
