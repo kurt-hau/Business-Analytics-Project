@@ -1,0 +1,591 @@
+---
+title: "Final Part 2, Question B"
+output: html_document
+date: "2024-11-18"
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Part 1 - Clean Data
+
+## 0) Load all from part 1
+
+# Deliverable 1
+
+```{r}
+# Set URLs for data sets
+states_url <- "https://github.com/mattstern2/BUA-301-Term-Project-Fall-2024/raw/main/States.csv"
+swift_transactions_url <- "https://github.com/mattstern2/BUA-301-Term-Project-Fall-2024/raw/main/Swift_Transactions.csv"
+
+#install.packages("tidyverse")
+library(tidyverse)
+swift_data <- read.csv(swift_transactions_url)
+print(swift_data)
+```
+
+# Deliverable 2 Question Responses
+
+1.     Can you identify three analyses that you might find beneficial to
+perform for Swift? Which Swift data columns (also known as features)
+would you utilize for each analysis?
+
+1.  **Sales Performance by Product Category**
+
+-   **Columns to Use**: product_name, category_name, revenue, units
+
+-   **Purpose**: Analyzing sales performance by category and individual
+    products will help identify high-revenue products, top categories,
+    and areas where inventory or marketing efforts could be optimized.
+
+2.  **Customer Loyalty Program Impact**
+
+-   **Columns to Use**: customer_id, revenue, transaction_id
+
+-   **Purpose**: By analyzing revenue contribution from loyalty program
+    members versus non-members, Swift can determine the effectiveness of
+    the loyalty program and assess opportunities for customer engagement
+    and retention.
+
+3.  **Geographic Sales Analysis**
+
+-   **Columns to Use**: zip, city, state_province, revenue
+
+-   **Purpose**: This analysis can highlight the revenue distribution
+    across regions, identifying high-performing and underperforming
+    locations. This information can be used for targeted marketing,
+    store expansions, or strategic initiatives in specific regions.
+
+2.     Which aspects of the data do you think need to be cleansed?
+Explain why.
+
+**ZIP Code Consistency**:
+
+-   Ensure that ZIP codes in both Swift data and state data (from
+    df_states) are formatted consistently to avoid issues in geographic
+    analyses. This includes ensuring they’re all five-digit codes
+    without any extra digits or characters.
+
+-   **Date Formatting**:
+
+-   The unformatted_date column, if in character format, should be
+    converted to a date type to enable time-based analyses (e.g.,
+    extracting year or month).
+
+-   **Handling of Missing Values**:
+
+-   Columns could have missing values. These values need to be handled
+    or imputed, as they can affect calculations and analyses related to
+    profitability.
+
+# Deliverable 2 Code
+
+```{r}
+# Examine the structure of the data
+str(swift_data)
+
+# Get descriptive statistics for each column
+summary(swift_data)
+
+# Show the first 10 rows
+head(swift_data, 10)
+
+# Show the last 10 rows
+tail(swift_data, 10)
+
+# Show a random selection of 50 rows
+slice_sample(swift_data, n = 50)
+
+
+```
+
+# Deliverable 3a Code
+
+```{r}
+# Load the lubridate package
+library(lubridate)
+
+```
+
+# Deliverable 3b Code
+
+```{r}
+# Use the str() and head() functions to check the format of the unformatted_date column
+str(swift_data$unformatted_date)
+head(swift_data$unformatted_date)
+
+
+
+
+```
+
+# Deliverable 3c Code
+
+```{r}
+# Load dplyr for mutate function
+library(dplyr)
+
+# Create a new column 'date' with formatted date
+swift_data <- swift_data %>%
+  mutate(date = ymd(unformatted_date))
+
+```
+
+# Deliverable 4 Code
+
+```{r}
+# Ensure lubridate is loaded for year() and month() functions
+library(lubridate)
+
+# Use mutate to add year and month columns
+swift_data <- swift_data %>%
+  mutate(
+    year = year(date),              # Extract the year from the date
+    month = month(date, label = TRUE, abbr = TRUE)  # Extract the month as abbreviated names
+  )
+
+# View 10 random rows to confirm the new columns are added correctly
+slice_sample(swift_data, n = 10)
+
+```
+
+# Deliverable 5a Question Response
+
+We know the revenue column is numeric because the str() function output
+specifies num, which indicates a numeric data type in R. Since we see
+this output: num [1:1049961] 1.69 11.96 -5 1 2.79 ..., we can confirm
+that the data type for that column is numeric
+
+# Deliverable 5a Code
+
+```{r}
+# Check the data type of the revenue column
+str(swift_data$revenue)
+
+```
+
+# Deliverable 5b Question Response
+
+1.  Are there any missing values? Write a sentence about how you learned
+    that answer.
+
+Since the summary did not indicate there were any NA values in the
+revenue column, we can assume there are none.
+
+2.  What are the maximum and minimum values for the column? Are these in
+    line with your expectations? What additional steps could you take to
+    gain even more perspective about the reasonableness of the values?
+
+Min: -1680, Max: 25000000. The minimum value is -1680, which suggests
+there may be refunds or adjustments resulting in negative revenue. The
+maximum value is 25000000, which is unusually high for typical product
+transactions in a convenience store. This value might be an outlier or
+data entry error, as it is significantly higher than the 3rd quartile
+(7) and the median (2).
+
+One additional step I could take is to investigate potential outliers.
+Further analysis can involve plotting the revenue distribution (e.g.,
+using a histogram or boxplot) to visually inspect the spread and
+identify unusual values.
+
+# Deliverable 5b Code
+
+```{r}
+# Summarize the revenue column to check for missing values and outliers
+summary(swift_data$revenue)
+
+```
+
+# Deliverable 5c Question Response
+
+Is there any product that has a revenue value that does not appear
+reasonable to you? Explain why or why not.
+
+Lottery Tickets and Fuel Products:
+
+-   The highest revenue values, such as 25,000,000 and 20,000,000, are
+    associated with lottery category items. This could imply large
+    jackpot payouts or an error in data entry. Large values might
+    sometimes be expected in lottery sales but are less typical at this
+    extreme scale.
+
+-   For fuel products, the revenue values are more moderate, generally
+    in the hundreds, which aligns better with typical fuel transactions.
+
+Overall, these seem reasonable to me, but the highest of the lottery
+payouts still seem like way too much for a convenience store to handle.
+
+# Deliverable 5c Code
+
+```{r}
+# Sort the data by revenue in descending order and display the top 25 rows
+swift_data_sorted <- swift_data %>% arrange(desc(revenue))
+head(swift_data_sorted, 25)
+
+
+```
+
+# Deliverable 5d Question Response
+
+For this case, we’ll assume that any revenue greater than \$10,000 is an
+outlier, as typical convenience store transactions wouldn’t reach such
+high amounts. Adjust this threshold if you have more specific criteria.
+
+Range of Values: The maximum value is now 999, which is significantly
+more reasonable for typical transactions at a convenience store compared
+to the previous maximum of 25,000,000. This indicates that the extreme
+outliers have been successfully removed, making the data range more
+realistic.
+
+The mean (7.75) and median (2.49) are now closer, suggesting a more
+balanced distribution without extreme high values skewing the average.
+
+# Deliverable 5d Code
+
+```{r}
+# Remove rows with outlier revenue values, if identified, to create a clean dataframe
+# For example, assuming we identify products with revenue greater than a threshold as outliers
+# (Replace `revenue_threshold` with a specific numeric threshold after reviewing outliers)
+revenue_threshold <- 10000
+df_clean <- swift_data %>% filter(revenue <= revenue_threshold)
+
+# Check the distribution of revenue again
+summary(df_clean$revenue)
+
+
+
+```
+
+# Deliverable 6a Question Response
+
+Missing or Incomplete ZIP Code Coverage:
+
+-   There may be ZIP codes in df_clean that do not have corresponding
+    entries in df_states. For example, some ZIP codes from different
+    regions might not be covered in df_states.
+
+-   Problem: This would result in NA values in the joined columns for
+    state information in df_clean, which might impact any state-level
+    analysis or aggregation in the Swift data.
+
+-   It’s crucial to verify that all ZIP codes in both datasets have been
+    converted to the same format. If there were any ZIP+4 entries in
+    postal_code that were truncated incorrectly, it could lead to
+    mismatches. Any mismatch in format will cause rows not to join
+    correctly, resulting in missing values for the state_province column
+    in df_clean.
+
+# Deliverable 6a
+
+```{r}
+# Load the states data into df_states
+df_states <- read.csv("https://github.com/mattstern2/BUA-301-Term-Project-Fall-2024/raw/main/States.csv")
+
+# Examine the structure of df_states
+str(df_states)
+
+# Get summary statistics of df_states
+summary(df_states)
+
+# View the first few rows
+head(df_states)
+
+# View the last few rows
+tail(df_states)
+
+
+```
+
+# Deliverable 6b
+
+```{r}
+# Create a new column `postal_code2` in `df_states` by converting `postal_code` to integer
+#df_states <- df_states %>%
+# mutate(postal_code2 = as.integer(postal_code))
+
+#library(dplyr)
+#library(stringr)
+
+# Remove the dash and extra four digits by extracting only the first five characters
+df_states <- df_states %>%
+  mutate(postal_code2 = as.integer(str_sub(postal_code, 1, 5)))
+
+# Verify the new column format and check for any remaining NAs
+summary(df_states$postal_code2)
+head(df_states)
+
+
+
+```
+
+# Deliverable 6c
+
+```{r}
+# Create a new column `postal_code2` by extracting only the first five characters of `postal_code`
+df_states <- df_states %>%
+  mutate(postal_code2 = str_sub(postal_code, 1, 5))
+
+# View the last few rows to confirm that `postal_code2` contains only the five-digit ZIP codes
+tail(df_states)
+
+
+
+```
+
+# Deliverable 6d
+
+```{r}
+# Convert `postal_code2` to integer format
+df_states <- df_states %>%
+  mutate(postal_code2 = as.integer(postal_code2))
+
+# Check the structure and summary of `postal_code2` to ensure the conversion worked correctly
+str(df_states$postal_code2)
+summary(df_states$postal_code2)
+
+```
+
+# Deliverable 6e
+
+```{r}
+# Rename `postal_code2` to `zip`
+df_states <- df_states %>%
+  rename(zip = postal_code2)
+
+# Verify the renaming
+str(df_states)
+
+
+```
+
+# Deliverable 6f
+
+```{r}
+
+# Select only the `zip` and `state_province` columns, with `zip` first
+df_states <- df_states %>%
+  select(zip, state_province)
+
+# Verify the changes
+str(df_states)
+head(df_states)
+
+
+```
+
+# Deliverable 6g Question Response
+
+There are increased row counts as well as NA vales that will result
+because of this
+
+A full_join() includes all rows from both df_clean and df_states, which
+results in additional rows. Specifically, rows from df_states with ZIP
+codes not present in df_clean are included, even though they don't
+correspond to any transaction data. This leads to an inflated dataset
+that contains rows with only state information but no corresponding
+transaction data.
+
+In df_clean_etl, rows from df_clean with ZIP codes not found in
+df_states will have NA values in the state_province column, while rows
+from df_states without matching ZIP codes in df_clean will have NA in
+transaction-related columns. This is undesirable because it introduces
+irrelevant rows with missing transaction data, which can distort
+analysis and calculations based on the joined dataset.
+
+# Deliverable 6g
+
+```{r}
+# Perform a full join between `df_clean` and `df_states` on the `zip` column
+df_clean_etl <- df_clean %>%
+  full_join(df_states, by = "zip")
+
+# Check the row count to see if it increased
+print(paste("Row count after full join:", nrow(df_clean_etl)))
+
+# View structure and inspect rows where state_province is NA in `df_clean_etl`
+summary(df_clean_etl)
+
+```
+
+# Deliverable 6h Question Response
+
+left_join(df_states, by = "zip"): This command performs a left join,
+keeping all rows from df_clean and adding the state_province column from
+df_states where a match is found on the zip column. This avoids adding
+unnecessary rows that don’t correspond to any transactions, as would
+happen with a full_join()After the left_join(), the row count of
+df_clean_etl matches that of df_clean, indicating that no extra rows
+were added
+
+# Deliverable 6h
+
+```{r}
+# Perform a left join between `df_clean` and `df_states` on the `zip` column
+df_clean_etl <- df_clean %>%
+  left_join(df_states, by = "zip")
+
+# Check the row count to ensure it matches the original row count of `df_clean`
+print(paste("Row count after left join:", nrow(df_clean_etl)))
+
+# View structure and summary to verify that `state_province` was added correctly
+str(df_clean_etl)
+summary(df_clean_etl)
+
+
+
+```
+
+# Question B - Profitability by Product Categories
+
+### Filtering out initial product categories
+
+Filter out certain product categories that are not appropriate for our
+analysis: Fuel, Car Wash, Trucker Services, Pop Deposits, Off Invoice
+Cigs, and Prepaid Cc Fees.
+
+```{r}
+new_question_b <- df_clean_etl %>%
+  select(unique_id, transaction_id, state_province, parent_name, revenue, costs) %>%
+  #filter out categories
+  filter(parent_name != "Fuel" &
+         parent_name != "Car Wash (40)" &
+         parent_name != "Trucker Services (39)" &
+         parent_name != "Pop Deposits (588)" &
+         parent_name != "Off Invoice Cigs (104)" &
+         parent_name != "Prepaid Cc Fee (924)")
+View(new_question_b)
+```
+
+### Profitable Product Category by Gross Margin
+
+Now, we are going to take our filtered data to find the most profitable
+by using gross profit margin for all product categories throughout ALL
+of Swift Arrow's stores.
+
+```{r}
+product_summary <- new_question_b %>%
+  group_by(state_province, parent_name) %>%
+  summarise(total_revenue = sum(revenue, na.rm = TRUE), total_costs = sum(costs, na.rm = TRUE)) %>%
+  mutate(total_gp = total_revenue - total_costs) %>%
+  mutate(gp_margin = total_gp / total_revenue) %>%
+  filter(total_gp > 0) %>%
+  arrange(desc(gp_margin))
+
+#FINAL PROFITABILIY FOR ALL STORES BY GP_MARGIN
+View(product_summary)
+```
+
+### More filtering to get to most profitable product category by gross profit margin
+
+We noticed that many product categories such as, gift cards, wireless
+products, other supplies, etc. had the greatest gross profit margin. We
+went further to find more tangible products that one would fine in the
+aisles of Swift Arrow. In the end, we are going to find the top product
+category among states Swift Arrow's stores are located in (see bar
+chart).
+
+```{r}
+final_p_summary <- product_summary %>%
+  filter(parent_name != "Lotto (271)" &
+           parent_name != "Gift Cards - SKU (938)" &
+           parent_name != "Pre-paid Credit Cards (920)" &
+           parent_name != "Long Distance (936)" &
+           parent_name != "Wireless (935)" &
+           parent_name != "Supplies (925)") %>%
+  filter(total_costs >.0001) %>%
+  group_by(state_province) %>%
+  slice_max(gp_margin, with_ties = FALSE)
+View(final_p_summary)
+#FINAL PROFTIABILITY TAKING OUT VARIABLES ABOVE --> MAX GP_MARGIN FOR EACH STATE
+
+#install.packages("ggplot2")
+library(ggplot2)
+ggplot(final_p_summary, 
+       aes(x = state_province, y = gp_margin, fill = parent_name)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "State", y = "Gross Profit Margin", fill = "Product Category") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(data = subset(final_p_summary, state_province == "Alabama"), aes(label = format(gp_margin, nsmall = 3, digits = 3)), vjust = 1.5, color = "black", size = 2)
+```
+
+### Most profitable product category by gross profit
+
+Next, to gain better insight on Swift Arrow's top product category; we
+want to find the most profitable product category by gross profit (in
+dollar amount).
+
+```{r}
+library(dplyr)
+best_gross_profit <- new_question_b %>%
+  group_by(state_province, parent_name) %>%
+  summarise(total_revenue = sum(revenue, na.rm = TRUE), total_costs = sum(costs, na.rm = TRUE)) %>%
+  mutate(total_gp = total_revenue - total_costs) %>%
+  filter(total_gp > 0) %>%
+  arrange(desc(total_gp))
+#TOP GROSS PROFIT FOR ALL STORES BY GROSS PROFIT 
+View(best_gross_profit)
+```
+
+### Heatmap - Top Product Category Variations Across State
+
+In order to see the overall picture of the most profitable product
+category, we used a heatmap showing total gross profit by category and
+state. We are able to come to this visualization by using the first 50
+observations within our dataset (best gross profit in descending order).
+We further filter out product categories that did not align with our
+business objective.
+
+```{r}
+#PLOT FOR HEATMAP OF TOTAL GROSS PROFIT ACROSS PRODUCT CATEGROY & STATE
+
+gross_profit_heatmap <- best_gross_profit %>%
+  filter(parent_name != "Cold Dispensed Beverage" &
+           parent_name != "Lotto (271)" &
+           parent_name != "Wireless (935)" &
+           parent_name != "Supplies (925)")
+View(gross_profit_heatmap)
+
+library(ggplot2)
+top <- gross_profit_heatmap$parent_name[1:50]
+
+ggplot(filter(gross_profit_heatmap, parent_name %in% top), aes(state_province, parent_name, fill = total_gp)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "red", high = "green", name = "Total Gross Profit") +
+  labs(title = "Total Gross Profit by Category and State", x = "State", y = "Product Category") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        plot.title = element_text(hjust = 0.5))
+```
+
+Learning for our analysis with using the gross profit margin, we wanted
+to ensure that real, tangible products are represented with our
+analysis. As a result, we filtered out many other categories (same
+product categories above). See bar chart for most profitable product
+category within each state that Swift Arrow's is located.
+
+```{r}
+#ONLY tangible products, max total gross profit 
+Max_gross_profit_per_state <- best_gross_profit %>%
+  filter(parent_name != "Cold Dispensed Beverage" & 
+           parent_name != "Lotto (271)" &
+           parent_name != "Gift Cards - SKU (938)" &
+           parent_name != "Pre-paid Credit Cards (920)" &
+           parent_name != "Long Distance (936)" &
+           parent_name != "Wireless (935)" &
+           parent_name != "Supplies (925)") %>%
+  group_by(state_province) %>%
+  slice_max(total_gp, with_ties = FALSE)
+#TOP GROSS PROFIT FOR EACH STATE
+View(Max_gross_profit_per_state)
+
+library(ggplot2)
+#install.packages("scales")
+library(scales)
+
+ggplot(Max_gross_profit_per_state, aes(x = state_province, y = total_gp, fill = parent_name)) +
+  geom_bar(stat = "identity") +
+  labs(x = "State", y = "Gross Profit", fill = "Product Category") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(data = subset(Max_gross_profit_per_state, state_province == "Alabama"), aes(label = comma(total_gp, accuracy = 0.01)),  # Format with commas and two decimal places
+            vjust = 1.5, color = "black", size = 3, fontface = "bold", nudge_x = 0.2)
+```
